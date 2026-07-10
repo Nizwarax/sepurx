@@ -1,0 +1,87 @@
+#!/bin/bash
+# VORTEX PROJECT heavy-line console menu.
+# Memakai karakter box sesuai request: ┃ ━ ┏ ┓ ┗ ┛
+# Banner connect /etc/dropbear_banner TIDAK DIUBAH.
+
+
+G='\033[1;32m'
+C='\033[1;36m'
+Y='\033[1;33m'
+P='\033[1;35m'
+R='\033[1;31m'
+W='\033[1;37m'
+D='\033[2m'
+N='\033[0m'
+
+# Border tebal sesuai request:
+# ┃ ━ ┏ ┓ ┗ ┛
+# Lebar dibuat 38 karakter supaya rapi di terminal HP.
+box_top() {
+  echo -e "${P}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${N}"
+}
+
+box_sep() {
+  echo -e "${P}┃━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┃${N}"
+}
+
+box_bottom() {
+  echo -e "${P}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${N}"
+}
+
+box_line() {
+  local text="$1"
+  local color="${2:-$W}"
+  text="${text:0:36}"
+  printf "${P}┃${N} ${color}%-36s${N} ${P}┃${N}\n" "$text"
+}
+
+title_box() {
+  local title="$1"
+  local color="${2:-$C}"
+  box_top
+  box_line "$title" "$color"
+  box_bottom
+}
+
+pause_back() {
+  echo ""
+  read -rp "$(echo -e "${D}Enter untuk kembali...${N}")" _
+}
+
+
+while true; do
+  clear
+
+  box_top
+  box_line "VORTEX PROJECT RAILWAY" "$C"
+  box_line "SSH MANAGER" "$G"
+  box_sep
+  box_line "Core    : Dropbear / WS / SNI" "$C"
+  box_line "Storage : /data/users.txt" "$Y"
+  box_sep
+  box_line "1. Tambah SSH User" "$G"
+  box_line "2. List SSH User" "$C"
+  box_line "3. Hapus SSH User" "$Y"
+  box_line "4. Clean Expired User" "$P"
+  box_line "x. Exit Console Menu" "$R"
+  box_bottom
+
+  echo ""
+  echo -ne "${Y}Pilih [${G}1${Y}/${C}2${Y}/${Y}3${Y}/${P}4${Y}/${R}x${Y}]: ${N}"
+  read -r pilih
+
+  case "$pilih" in
+    1) clear; addssh; pause_back ;;
+    2) clear; listssh; pause_back ;;
+    3) clear; delssh; pause_back ;;
+    4) clear; vortex-clean-expired; pause_back ;;
+    x|X|5)
+      echo -e "${G}Keluar dari VORTEX Console Menu.${N}"
+      exit 0
+      ;;
+    *)
+      echo -e "${R}Pilihan salah.${N}"
+      sleep 1
+      ;;
+  esac
+done

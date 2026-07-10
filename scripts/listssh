@@ -1,0 +1,89 @@
+#!/bin/bash
+DATA_DIR="${DATA_DIR:-/data}"
+USERS_FILE="$DATA_DIR/users.txt"
+
+
+G='\033[1;32m'
+C='\033[1;36m'
+Y='\033[1;33m'
+P='\033[1;35m'
+R='\033[1;31m'
+W='\033[1;37m'
+D='\033[2m'
+N='\033[0m'
+
+# Border tebal sesuai request:
+# ┃ ━ ┏ ┓ ┗ ┛
+# Lebar dibuat 38 karakter supaya rapi di terminal HP.
+box_top() {
+  echo -e "${P}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${N}"
+}
+
+box_sep() {
+  echo -e "${P}┃━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┃${N}"
+}
+
+box_bottom() {
+  echo -e "${P}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${N}"
+}
+
+box_line() {
+  local text="$1"
+  local color="${2:-$W}"
+  text="${text:0:36}"
+  printf "${P}┃${N} ${color}%-36s${N} ${P}┃${N}\n" "$text"
+}
+
+title_box() {
+  local title="$1"
+  local color="${2:-$C}"
+  box_top
+  box_line "$title" "$color"
+  box_bottom
+}
+
+pause_back() {
+  echo ""
+  read -rp "$(echo -e "${D}Enter untuk kembali...${N}")" _
+}
+
+
+mkdir -p "$DATA_DIR"
+touch "$USERS_FILE"
+
+title_box "LIST SSH USER" "$C"
+
+TODAY="$(date +%F)"
+COUNT=0
+
+echo ""
+if [ ! -s "$USERS_FILE" ]; then
+  echo -e "${Y}Belum ada user SSH.${N}"
+  exit 0
+fi
+
+echo -e "${P}┏━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━┓${N}"
+printf "${P}┃${N} ${W}%-2s${N} ${P}┃${N} ${W}%-14s${N} ${P}┃${N} ${W}%-10s${N} ${P}┃${N} ${W}%-6s${N} ${P}┃${N}\n" "NO" "USERNAME" "EXPIRED" "STATUS"
+echo -e "${P}┃━━━━╋━━━━━━━━━━━━━━━━╋━━━━━━━━━━━━╋━━━━━━━━┃${N}"
+
+while IFS=: read -r USERNAME PASSWORD EXP_DATE; do
+  [ -z "$USERNAME" ] && continue
+  COUNT=$((COUNT + 1))
+
+  if [ -z "$EXP_DATE" ]; then
+    EXP_DATE="-"
+    STATUS_TX="UNK"
+    STATUS_COLOR="$Y"
+  elif [ "$EXP_DATE" \< "$TODAY" ]; then
+    STATUS_TX="EXP"
+    STATUS_COLOR="$R"
+  else
+    STATUS_TX="OK"
+    STATUS_COLOR="$G"
+  fi
+
+  printf "${P}┃${N} ${C}%-2s${N} ${P}┃${N} ${W}%-14.14s${N} ${P}┃${N} ${Y}%-10s${N} ${P}┃${N} ${STATUS_COLOR}%-6s${N} ${P}┃${N}\n" "$COUNT" "$USERNAME" "$EXP_DATE" "$STATUS_TX"
+done < "$USERS_FILE"
+
+echo -e "${P}┗━━━━┻━━━━━━━━━━━━━━━━┻━━━━━━━━━━━━┻━━━━━━━━┛${N}"
+echo -e "${W}Total user ${Y}: ${C}${COUNT}${N}"

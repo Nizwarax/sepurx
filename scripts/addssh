@@ -1,0 +1,113 @@
+#!/bin/bash
+DATA_DIR="${DATA_DIR:-/data}"
+USERS_FILE="$DATA_DIR/users.txt"
+
+
+G='\033[1;32m'
+C='\033[1;36m'
+Y='\033[1;33m'
+P='\033[1;35m'
+R='\033[1;31m'
+W='\033[1;37m'
+D='\033[2m'
+N='\033[0m'
+
+# Border tebal sesuai request:
+# ┃ ━ ┏ ┓ ┗ ┛
+# Lebar dibuat 38 karakter supaya rapi di terminal HP.
+box_top() {
+  echo -e "${P}┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${N}"
+}
+
+box_sep() {
+  echo -e "${P}┃━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┃${N}"
+}
+
+box_bottom() {
+  echo -e "${P}┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛${N}"
+}
+
+box_line() {
+  local text="$1"
+  local color="${2:-$W}"
+  text="${text:0:36}"
+  printf "${P}┃${N} ${color}%-36s${N} ${P}┃${N}\n" "$text"
+}
+
+title_box() {
+  local title="$1"
+  local color="${2:-$C}"
+  box_top
+  box_line "$title" "$color"
+  box_bottom
+}
+
+pause_back() {
+  echo ""
+  read -rp "$(echo -e "${D}Enter untuk kembali...${N}")" _
+}
+
+
+mkdir -p "$DATA_DIR"
+touch "$USERS_FILE"
+
+title_box "TAMBAH SSH USER" "$G"
+
+gen_pass() {
+  tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 8
+}
+
+echo ""
+read -rp "$(echo -e "${C}Username        ${Y}: ${N}")" USERNAME
+[ -z "$USERNAME" ] && echo -e "${R}Username kosong.${N}" && exit 1
+
+if echo "$USERNAME" | grep -q '[^A-Za-z0-9_-]'; then
+  echo -e "${R}Username hanya boleh huruf, angka, underscore, strip.${N}"
+  exit 1
+fi
+
+if id "$USERNAME" >/dev/null 2>&1; then
+  echo -e "${Y}User sudah ada. Password dan expired akan diperbarui.${N}"
+fi
+
+read -rp "$(echo -e "${C}Password        ${Y}: ${N}")" PASSWORD
+if [ -z "$PASSWORD" ]; then
+  PASSWORD="$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 8)"
+  echo -e "${Y}Password otomatis: ${W}${PASSWORD}${N}"
+fi
+
+read -rp "$(echo -e "${C}Masa aktif hari ${Y}: ${N}")" DAYS
+DAYS="${DAYS:-30}"
+
+if ! echo "$DAYS" | grep -qE '^[0-9]+$'; then
+  echo -e "${R}Masa aktif harus angka.${N}"
+  exit 1
+fi
+
+EXP_DATE="$(date -d "+${DAYS} days" +%F 2>/dev/null || date +%F)"
+
+if ! id "$USERNAME" >/dev/null 2>&1; then
+  useradd -m -s /bin/bash -e "$EXP_DATE" "$USERNAME" >/dev/null 2>&1 || true
+else
+  usermod -e "$EXP_DATE" "$USERNAME" >/dev/null 2>&1 || true
+fi
+
+echo "$USERNAME:$PASSWORD" | chpasswd >/dev/null 2>&1 || {
+  echo -e "${R}Gagal set password.${N}"
+  exit 1
+}
+
+TMP_FILE="$USERS_FILE.tmp"
+grep -v "^${USERNAME}:" "$USERS_FILE" > "$TMP_FILE" 2>/dev/null || true
+echo "$USERNAME:$PASSWORD:$EXP_DATE" >> "$TMP_FILE"
+mv "$TMP_FILE" "$USERS_FILE"
+
+echo ""
+box_top
+box_line "SSH USER BERHASIL DIBUAT" "$G"
+box_sep
+box_line "Username : $USERNAME" "$C"
+box_line "Password : $PASSWORD" "$Y"
+box_line "Expired  : $EXP_DATE" "$C"
+box_line "Status   : ACTIVE" "$G"
+box_bottom
